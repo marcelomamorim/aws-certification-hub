@@ -1,0 +1,140 @@
+---
+import { getCopy, type Language } from "../lib/site";
+import { localizedPath } from "../lib/paths";
+import { getCertificationsByLevel, levelLabels, levelOrder, type CertLevel } from "../lib/certifications";
+
+interface Props {
+  lang: Language;
+}
+
+const { lang } = Astro.props;
+const copy = getCopy(lang);
+
+const levelDescriptions: Record<Language, Record<CertLevel, string>> = {
+  pt: {
+    foundational: "Ponto de partida: conceitos e vocabulário da nuvem.",
+    associate: "Papéis técnicos: arquitetura, desenvolvimento, operações e dados.",
+    professional: "Cenários avançados e de grande escala.",
+    specialty: "Aprofundamento em um domínio específico."
+  },
+  en: {
+    foundational: "Starting point: cloud concepts and vocabulary.",
+    associate: "Technical roles: architecture, development, operations, and data.",
+    professional: "Advanced, large-scale scenarios.",
+    specialty: "Deep dive into a specific domain."
+  }
+};
+
+const groups = levelOrder.map((level) => ({
+  level,
+  label: levelLabels[lang][level],
+  description: levelDescriptions[lang][level],
+  certs: getCertificationsByLevel(lang, level)
+}));
+---
+
+<div class="roadmap">
+  {groups.map((group) => (
+    <section class="level-group">
+      <header class="level-head">
+        <h2 class="level-title">{group.label}</h2>
+        <p class="level-desc">{group.description}</p>
+      </header>
+
+      <ul class="cert-grid">
+        {group.certs.map((cert) => (
+          <li>
+            <a class="cert-card surface" href={localizedPath(lang, `certifications/${cert.slug}`)}>
+              <span class="cert-code mono">{cert.code}</span>
+              <h3>{cert.name}</h3>
+              <p>{cert.overview}</p>
+              <span class="cert-cta">{copy.seeDetails} →</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</div>
+
+<style>
+  .roadmap {
+    display: grid;
+    gap: 2.5rem;
+  }
+
+  .level-head {
+    display: grid;
+    gap: 0.3rem;
+    margin-bottom: 1.1rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .level-title {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .level-desc {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+  }
+
+  .cert-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .cert-card {
+    display: grid;
+    gap: 0.55rem;
+    height: 100%;
+    padding: 1.3rem;
+    transition:
+      transform 140ms ease,
+      border-color 140ms ease;
+  }
+
+  .cert-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(var(--primary-rgb), 0.35);
+    color: inherit;
+  }
+
+  .cert-code {
+    color: var(--primary);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .cert-card h3 {
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .cert-card p {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 0.88rem;
+    line-height: 1.55;
+  }
+
+  .cert-cta {
+    margin-top: auto;
+    color: var(--primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+</style>

@@ -1,0 +1,59 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CertRoadmap from "../../components/CertRoadmap.astro";
+import { getCopy, languages, type Language } from "../../lib/site";
+import { localizedPath } from "../../lib/paths";
+import { getAllCertifications } from "../../lib/certifications";
+
+export function getStaticPaths() {
+  return languages.map((lang) => ({ params: { lang } }));
+}
+
+const lang = Astro.params.lang as Language;
+const copy = getCopy(lang);
+const currentPath = localizedPath(lang);
+const alternates = languages.map((code) => ({ lang: code, href: localizedPath(code) }));
+const total = getAllCertifications(lang).length;
+---
+
+<BaseLayout lang={lang} currentPath={currentPath} alternates={alternates}>
+  <section class="hero">
+    <div class="section-frame hero-shell">
+      <span class="eyebrow">{copy.heroEyebrow}</span>
+      <h1 class="section-title">{copy.heroTitle}</h1>
+      <p class="section-copy">{copy.heroText}</p>
+      <div class="btn-row">
+        <a class="btn primary" href="#roadmap">{copy.heroCtaPrimary}</a>
+      </div>
+      <p class="hero-count mono">{total} {copy.certifications}</p>
+    </div>
+  </section>
+
+  <section class="roadmap-section" id="roadmap">
+    <div class="section-frame">
+      <CertRoadmap lang={lang} />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    padding: 2.5rem 0 1.5rem;
+  }
+
+  .hero-shell {
+    display: grid;
+    gap: 1.1rem;
+    max-width: 60rem;
+  }
+
+  .hero-count {
+    margin: 0.6rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  .roadmap-section {
+    padding: 2rem 0 4rem;
+  }
+</style>

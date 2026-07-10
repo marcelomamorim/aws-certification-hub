@@ -1,0 +1,39 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import CertRoadmap from "../../../components/CertRoadmap.astro";
+import { getCopy, languages, type Language } from "../../../lib/site";
+import { localizedPath } from "../../../lib/paths";
+
+export function getStaticPaths() {
+  return languages.map((lang) => ({ params: { lang } }));
+}
+
+const lang = Astro.params.lang as Language;
+const copy = getCopy(lang);
+const currentPath = localizedPath(lang, "certifications");
+const alternates = languages.map((code) => ({ lang: code, href: localizedPath(code, "certifications") }));
+---
+
+<BaseLayout lang={lang} title={copy.certifications} currentPath={currentPath} alternates={alternates}>
+  <section class="list-section">
+    <div class="section-frame">
+      <header class="list-head">
+        <span class="eyebrow">{copy.certifications}</span>
+        <h1 class="section-title">{copy.levelsTitle}</h1>
+      </header>
+      <CertRoadmap lang={lang} />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .list-section {
+    padding: 2.5rem 0 4rem;
+  }
+
+  .list-head {
+    display: grid;
+    gap: 0.7rem;
+    margin-bottom: 2rem;
+  }
+</style>
