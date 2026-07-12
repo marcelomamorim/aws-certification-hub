@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import CertRoadmap from "../../components/CertRoadmap.astro";
+import CoverageMatrix from "../../components/CoverageMatrix.astro";
 import { getCopy, languages, type Language } from "../../lib/site";
 import { localizedPath } from "../../lib/paths";
 import { getAllCertifications } from "../../lib/certifications";
@@ -34,6 +35,10 @@ const total = getAllCertifications(lang).length;
       <CertRoadmap lang={lang} />
     </div>
   </section>
+
+  <div class="section-frame">
+    <CoverageMatrix lang={lang} />
+  </div>
 </BaseLayout>
 
 <style>

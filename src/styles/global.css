@@ -2,12 +2,14 @@
 @import "@fontsource/inter/500.css";
 @import "@fontsource/inter/600.css";
 @import "@fontsource/inter/700.css";
+@import "@fontsource-variable/fraunces";
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/500.css";
 @import "@fontsource/jetbrains-mono/700.css";
 
 :root {
   --font-sans: "Inter", "IBM Plex Sans", system-ui, sans-serif;
+  --font-display: "Fraunces Variable", "Georgia", serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", monospace;
 
   --space-1: 0.25rem;
@@ -32,10 +34,10 @@
   --line: #d8dee8;
   --line-strong: #c2ccda;
 
-  --primary: #155eef;
-  --primary-rgb: 21, 94, 239;
-  --accent: #344054;
-  --accent-rgb: 52, 64, 84;
+  --primary: #7c3aed;
+  --primary-rgb: 124, 58, 237;
+  --accent: #6d28d9;
+  --accent-rgb: 109, 40, 217;
   --signal: #f2f4f7;
   --success: #067647;
   --warning: #b54708;
@@ -67,21 +69,21 @@
 }
 
 :root[data-theme="dark"] {
-  --bg: #081120;
+  --bg: #0d0a1f;
   --bg-soft: #0d1729;
-  --surface: #0f1b31;
-  --surface-alt: #13213b;
+  --surface: #171334;
+  --surface-alt: #1d1740;
   --surface-strong: #172741;
 
   --text: #f5f7fb;
   --text-soft: #d3dbea;
   --text-muted: #9dacbf;
 
-  --line: #22334f;
+  --line: #2e2450;
   --line-strong: #304261;
 
-  --primary: #6ea8ff;
-  --primary-rgb: 110, 168, 255;
+  --primary: #a78bfa;
+  --primary-rgb: 167, 139, 250;
   --accent: #c9d5e7;
   --accent-rgb: 201, 213, 231;
   --signal: #16233a;
@@ -109,18 +111,18 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #081120;
+    --bg: #0d0a1f;
     --bg-soft: #0d1729;
-    --surface: #0f1b31;
-    --surface-alt: #13213b;
+    --surface: #171334;
+    --surface-alt: #1d1740;
     --surface-strong: #172741;
     --text: #f5f7fb;
     --text-soft: #d3dbea;
     --text-muted: #9dacbf;
-    --line: #22334f;
+    --line: #2e2450;
     --line-strong: #304261;
-    --primary: #6ea8ff;
-    --primary-rgb: 110, 168, 255;
+    --primary: #a78bfa;
+    --primary-rgb: 167, 139, 250;
     --accent: #c9d5e7;
     --accent-rgb: 201, 213, 231;
     --signal: #16233a;
@@ -293,10 +295,11 @@ main {
 
 .section-title {
   margin: 0;
-  font-size: clamp(2rem, 5vw, 4rem);
-  font-weight: 700;
-  line-height: 1.02;
-  letter-spacing: -0.05em;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.7rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
 }
 
 .section-copy {
@@ -512,5 +515,43 @@ main {
 
   .prose table {
     min-width: 32rem;
+  }
+}
+
+@keyframes content-reveal {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes weight-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.hero-shell,
+.level-group,
+.domain-card,
+.coverage {
+  animation: content-reveal 420ms both ease-out;
+}
+
+.level-group:nth-child(2),
+.domain-card:nth-child(2) { animation-delay: 50ms; }
+.level-group:nth-child(3),
+.domain-card:nth-child(3) { animation-delay: 100ms; }
+.level-group:nth-child(4),
+.domain-card:nth-child(4) { animation-delay: 150ms; }
+
+.weight-bar span {
+  transform-origin: left center;
+  animation: weight-grow 650ms 120ms both cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

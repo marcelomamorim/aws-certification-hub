@@ -1,0 +1,58 @@
+---
+import type { Language } from "../lib/site";
+
+interface Props { lang: Language; itemId: string; }
+const { lang, itemId } = Astro.props;
+const text = lang === "pt"
+  ? { pending: "Marcar como estudada", done: "Estudada", note: "O progresso fica salvo neste dispositivo." }
+  : { pending: "Mark as studied", done: "Studied", note: "Progress is saved on this device." };
+---
+
+<div class="study-progress" data-study-progress data-item-id={itemId} data-pending={text.pending} data-done={text.done}>
+  <button type="button" class="progress-button" aria-pressed="false">
+    <span class="progress-icon" aria-hidden="true">✓</span>
+    <span data-progress-label>{text.pending}</span>
+  </button>
+  <span class="progress-note">{text.note}</span>
+</div>
+
+<script>
+  const storageKey = "aws-study-progress-v1";
+  const readProgress = () => {
+    try { return new Set(JSON.parse(localStorage.getItem(storageKey) ?? "[]")); }
+    catch { return new Set(); }
+  };
+
+  document.querySelectorAll("[data-study-progress]").forEach((root) => {
+    if (!(root instanceof HTMLElement)) return;
+    const button = root.querySelector("button");
+    const label = root.querySelector("[data-progress-label]");
+    const id = root.dataset.itemId;
+    if (!button || !label || !id) return;
+
+    const render = () => {
+      const done = readProgress().has(id);
+      button.setAttribute("aria-pressed", String(done));
+      root.classList.toggle("is-complete", done);
+      label.textContent = done ? root.dataset.done ?? "Done" : root.dataset.pending ?? "Mark as studied";
+    };
+
+    button.addEventListener("click", () => {
+      const progress = readProgress();
+      progress.has(id) ? progress.delete(id) : progress.add(id);
+      localStorage.setItem(storageKey, JSON.stringify(Array.from(progress)));
+      render();
+    });
+    render();
+  });
+</script>
+
+<style>
+  .study-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 0.5rem; }
+  .progress-button { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.7rem; padding: 0 0.9rem; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--text-soft); font: inherit; font-size: 0.86rem; font-weight: 700; cursor: pointer; transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease; }
+  .progress-button:hover { transform: translateY(-1px); border-color: var(--primary); }
+  .progress-icon { display: grid; place-items: center; width: 1.25rem; height: 1.25rem; border: 1px solid currentColor; border-radius: 999px; opacity: 0.55; }
+  .is-complete .progress-button { border-color: var(--primary); background: rgba(var(--primary-rgb), 0.1); color: var(--primary); }
+  .is-complete .progress-icon { background: var(--primary); color: #fff; opacity: 1; }
+  .progress-note { color: var(--text-muted); font-size: 0.76rem; }
+</style>

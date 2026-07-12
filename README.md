@@ -30,14 +30,18 @@ npm run preview
 
 ## Estrutura principal
 
-- `src/lib/certifications.ts` — fonte de dados bilíngue das provas (nível, formato, domínios + pesos, tópicos, serviços, recursos).
+- `src/lib/certifications.ts` — fonte de dados bilíngue das provas e validações de integridade (slugs, códigos, traduções, recursos e soma dos pesos).
 - `src/pages/[lang]/` — home (roadmap por nível), listagem e página de detalhe da certificação.
 - `src/pages/search/[lang].json.ts` — índice JSON consumido pelo app desktop.
 - `.github/workflows/deploy.yml` — deploy automático para GitHub Pages a cada push em `main`.
 
-## Conteúdo inicial (v1)
+## Conteúdo atual
 
-13 certificações do lineup AWS mapeadas com metadados e pesos oficiais. Conteúdo detalhado por domínio (summary + tópicos-chave) já preenchido para **CLF-C02** (Cloud Practitioner) e **AIP-C01** (Generative AI Developer – Professional), semeados a partir do material curado. As demais têm domínios e pesos oficiais e vão sendo aprofundadas incrementalmente.
+12 certificações ativas do lineup AWS mapeadas com metadados, domínios, pesos, tópicos-chave e serviços relacionados. O histórico da **MLS-C01** permanece arquivado na fonte, sem gerar páginas públicas. O lineup inclui **SOA-C03** (CloudOps Engineer – Associate) e **SCS-C03** (Security – Specialty).
+
+O build falha quando encontra slugs ou códigos duplicados, pesos que não totalizam 100%, conteúdo-base sem tradução ou certificações sem recursos oficiais.
+
+Cada página de certificação inclui um modo de estudo local: checklist por domínio, progresso persistente, cartões de recuperação ativa e quiz com correção imediata e placar por domínio. CLF-C02 e SAA-C03 possuem simulados editoriais; as demais provas oferecem exercícios de domínio derivados do blueprint. Nenhum login ou backend é necessário.
 
 ## Deploy
 

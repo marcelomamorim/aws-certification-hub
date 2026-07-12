@@ -1,0 +1,125 @@
+---
+import { getAllCertifications } from "../lib/certifications";
+import { servicesCatalogBase, type Language } from "../lib/site";
+
+interface Props {
+  lang: Language;
+}
+
+const { lang } = Astro.props;
+const certifications = getAllCertifications(lang);
+const serviceMap = new Map<string, { name: string; certifications: Set<string> }>();
+
+for (const cert of certifications) {
+  for (const service of cert.highlightedServices) {
+    if (!service.slug) continue;
+    const current = serviceMap.get(service.slug) ?? { name: service.name, certifications: new Set<string>() };
+    current.certifications.add(cert.code);
+    serviceMap.set(service.slug, current);
+  }
+}
+
+const services = Array.from(serviceMap, ([slug, service]) => ({ slug, ...service }))
+  .sort((left, right) => right.certifications.size - left.certifications.size || left.name.localeCompare(right.name));
+
+const text = lang === "pt"
+  ? {
+      eyebrow: "Mapa de cobertura",
+      title: "Serviços que conectam as certificações",
+      description: "Compare os serviços destacados em cada prova. Use o filtro para reduzir a matriz a uma certificação.",
+      filter: "Filtrar certificação",
+      all: "Todas as certificações",
+      service: "Serviço",
+      coverage: "Cobertura",
+      appears: "Serviço destacado nesta certificação",
+      notAppears: "Não está entre os serviços destacados"
+    }
+  : {
+      eyebrow: "Coverage map",
+      title: "Services that connect the certifications",
+      description: "Compare highlighted services across exams. Use the filter to narrow the matrix to one certification.",
+      filter: "Filter certification",
+      all: "All certifications",
+      service: "Service",
+      coverage: "Coverage",
+      appears: "Highlighted service in this certification",
+      notAppears: "Not among the highlighted services"
+    };
+---
+
+<section class="coverage" aria-labelledby="coverage-title">
+  <header class="coverage-head">
+    <div>
+      <span class="eyebrow">{text.eyebrow}</span>
+      <h2 class="section-title" id="coverage-title">{text.title}</h2>
+      <p class="section-copy">{text.description}</p>
+    </div>
+    <label class="matrix-filter">
+      <span>{text.filter}</span>
+      <select data-matrix-filter>
+        <option value="">{text.all}</option>
+        {certifications.map((cert) => <option value={cert.code}>{cert.code}</option>)}
+      </select>
+    </label>
+  </header>
+
+  <div class="matrix-shell surface" tabindex="0">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">{text.service}</th>
+          <th scope="col" class="coverage-total">{text.coverage}</th>
+          {certifications.map((cert) => <th scope="col" data-cert-column={cert.code}><abbr title={cert.name}>{cert.code}</abbr></th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {services.map((service) => (
+          <tr data-matrix-row data-certifications={Array.from(service.certifications).join(" ")}>
+            <th scope="row"><a href={`${servicesCatalogBase}/${lang}/services/${service.slug}/`}>{service.name} ↗</a></th>
+            <td class="coverage-total mono">{service.certifications.size}</td>
+            {certifications.map((cert) => {
+              const covered = service.certifications.has(cert.code);
+              return <td data-cert-column={cert.code}><span class:list={["coverage-dot", { covered }]} aria-label={covered ? text.appears : text.notAppears}>{covered ? "●" : "·"}</span></td>;
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+  document.querySelectorAll("[data-matrix-filter]").forEach((control) => {
+    if (!(control instanceof HTMLSelectElement)) return;
+    control.addEventListener("change", () => {
+      const selected = control.value;
+      document.querySelectorAll("[data-matrix-row]").forEach((row) => {
+        if (!(row instanceof HTMLTableRowElement)) return;
+        row.hidden = Boolean(selected) && !(row.dataset.certifications ?? "").split(" ").includes(selected);
+      });
+      document.querySelectorAll("[data-cert-column]").forEach((cell) => {
+        if (!(cell instanceof HTMLElement)) return;
+        cell.hidden = Boolean(selected) && cell.dataset.certColumn !== selected;
+      });
+    });
+  });
+</script>
+
+<style>
+  .coverage { padding: 2rem 0 4rem; }
+  .coverage-head { display: flex; align-items: end; justify-content: space-between; gap: 2rem; margin-bottom: 1.4rem; }
+  .coverage-head > div { display: grid; gap: 0.7rem; max-width: 50rem; }
+  .matrix-filter { display: grid; gap: 0.35rem; min-width: 15rem; color: var(--text-muted); font-size: 0.78rem; font-weight: 600; }
+  .matrix-filter select { min-height: 2.7rem; padding: 0 0.75rem; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); color: var(--text); }
+  .matrix-shell { max-height: 42rem; overflow: auto; overscroll-behavior: contain; }
+  table { width: 100%; min-width: 76rem; border-collapse: collapse; }
+  th, td { padding: 0.75rem; border-bottom: 1px solid var(--line); text-align: center; }
+  thead th { position: sticky; top: 0; background: var(--surface); color: var(--text-muted); font-size: 0.72rem; }
+  tbody th { position: sticky; left: 0; min-width: 14rem; background: var(--surface); text-align: left; font-size: 0.86rem; }
+  tbody th a { color: var(--text); }
+  .coverage-total { color: var(--text-muted); }
+  .coverage-dot { color: var(--line-strong); font-size: 1rem; }
+  .coverage-dot.covered { color: var(--primary); filter: drop-shadow(0 0 5px rgba(var(--primary-rgb), 0.28)); }
+  tr[hidden], [data-cert-column][hidden] { display: none; }
+  @media (max-width: 720px) { .coverage-head { align-items: stretch; flex-direction: column; gap: 1rem; } }
+</style>

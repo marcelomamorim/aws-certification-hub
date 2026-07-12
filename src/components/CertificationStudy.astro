@@ -1,0 +1,171 @@
+---
+import type { CertEntry } from "../lib/certifications";
+import type { Language } from "../lib/site";
+
+interface Props { lang: Language; cert: CertEntry; }
+const { lang, cert } = Astro.props;
+const topics = cert.domains.flatMap((domain, domainIndex) =>
+  domain.keyTopics.map((topic, topicIndex) => ({
+    id: `${domainIndex}:${topicIndex}`,
+    domain: domain.name,
+    weight: domain.weightPct,
+    topic: topic.text,
+    context: domain.summary,
+    services: domain.services
+  }))
+);
+const reviewCards = topics.filter((_, index) => index % Math.max(1, Math.ceil(topics.length / 8)) === 0).slice(0, 8);
+const dataJson = JSON.stringify({ code: cert.code, total: topics.length });
+const text = lang === "pt" ? {
+  eyebrow: "Modo de estudo", title: "Estude e acompanhe seu domínio da prova",
+  description: "Conclua tópicos, acompanhe o progresso ponderado por domínio e pratique recuperação ativa antes de consultar a resposta.",
+  progress: "Progresso geral", completed: "concluídos", reset: "Reiniciar progresso",
+  checklist: "Checklist por domínio", review: "Revisão ativa", reviewText: "Tente responder em voz alta antes de revelar.",
+  prompt: "Explique sem consultar:", reveal: "Revelar pontos-chave", hide: "Ocultar resposta",
+  services: "Serviços para revisar"
+} : {
+  eyebrow: "Study mode", title: "Study and track your exam mastery",
+  description: "Complete topics, track weighted domain progress, and practice active recall before checking the answer.",
+  progress: "Overall progress", completed: "completed", reset: "Reset progress",
+  checklist: "Domain checklist", review: "Active recall", reviewText: "Try answering out loud before revealing the answer.",
+  prompt: "Explain without looking:", reveal: "Reveal key points", hide: "Hide answer",
+  services: "Services to review"
+};
+---
+
+<section class="study-lab surface" data-cert-study data-study-config={dataJson} aria-labelledby="study-title">
+  <header class="study-head">
+    <div>
+      <span class="eyebrow">{text.eyebrow}</span>
+      <h2 class="block-title" id="study-title">{text.title}</h2>
+      <p>{text.description}</p>
+    </div>
+    <div class="progress-panel">
+      <div class="progress-label"><strong>{text.progress}</strong><span class="mono" data-study-percent>0%</span></div>
+      <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-study-bar><span></span></div>
+      <span class="progress-count" data-study-count>0 / {topics.length} {text.completed}</span>
+      <button type="button" class="reset-button" data-study-reset>{text.reset}</button>
+    </div>
+  </header>
+
+  <div class="study-columns">
+    <div>
+      <h3>{text.checklist}</h3>
+      <div class="domain-checklists">
+        {cert.domains.map((domain, domainIndex) => (
+          <details class="domain-checklist" open={domainIndex === 0}>
+            <summary>
+              <span>{domain.name}</span>
+              <span class="domain-progress mono" data-domain-progress={domainIndex}>0/{domain.keyTopics.length}</span>
+            </summary>
+            <div class="checklist-items">
+              {domain.keyTopics.map((topic, topicIndex) => (
+                <label class="study-topic">
+                  <input type="checkbox" data-study-topic={`${domainIndex}:${topicIndex}`} data-domain={domainIndex} />
+                  <span>{topic}</span>
+                </label>
+              ))}
+            </div>
+          </details>
+        ))}
+      </div>
+    </div>
+
+    <div>
+      <h3>{text.review}</h3>
+      <p class="review-intro">{text.reviewText}</p>
+      <div class="review-cards">
+        {reviewCards.map((card) => (
+          <article class="review-card">
+            <span class="review-domain">{card.domain} · {card.weight}%</span>
+            <p><strong>{text.prompt}</strong> {card.topic}</p>
+            <button type="button" data-reveal data-show={text.reveal} data-hide={text.hide} aria-expanded="false">{text.reveal}</button>
+            <div class="review-answer" hidden>
+              {card.context && <p>{card.context}</p>}
+              {card.services.length > 0 && <p><strong>{text.services}:</strong> {card.services.join(", ")}.</p>}
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  document.querySelectorAll("[data-cert-study]").forEach((root) => {
+    if (!(root instanceof HTMLElement)) return;
+    const config = JSON.parse(root.dataset.studyConfig ?? "{}");
+    const storageKey = `aws-cert-study:${config.code}`;
+    const inputs = Array.from(root.querySelectorAll("[data-study-topic]"));
+    const read = () => { try { return new Set(JSON.parse(localStorage.getItem(storageKey) ?? "[]")); } catch { return new Set(); } };
+
+    const render = () => {
+      const done = read();
+      inputs.forEach((input) => { if (input instanceof HTMLInputElement) input.checked = done.has(input.dataset.studyTopic); });
+      const count = done.size;
+      const percent = config.total ? Math.round((count / config.total) * 100) : 0;
+      const percentLabel = root.querySelector("[data-study-percent]");
+      const countLabel = root.querySelector("[data-study-count]");
+      const bar = root.querySelector("[data-study-bar]");
+      if (percentLabel) percentLabel.textContent = `${percent}%`;
+      if (countLabel) countLabel.textContent = `${count} / ${config.total} ${countLabel.textContent?.split(" ").slice(3).join(" ") ?? ""}`;
+      if (bar) { bar.setAttribute("aria-valuenow", String(percent)); bar.querySelector("span")?.setAttribute("style", `width:${percent}%`); }
+      root.querySelectorAll("[data-domain-progress]").forEach((label) => {
+        if (!(label instanceof HTMLElement)) return;
+        const domain = label.dataset.domainProgress;
+        const domainInputs = inputs.filter((input) => input instanceof HTMLInputElement && input.dataset.domain === domain);
+        label.textContent = `${domainInputs.filter((input) => input instanceof HTMLInputElement && input.checked).length}/${domainInputs.length}`;
+      });
+    };
+
+    inputs.forEach((input) => input.addEventListener("change", () => {
+      if (!(input instanceof HTMLInputElement)) return;
+      const done = read(); const id = input.dataset.studyTopic;
+      if (id) input.checked ? done.add(id) : done.delete(id);
+      localStorage.setItem(storageKey, JSON.stringify(Array.from(done))); render();
+    }));
+    root.querySelector("[data-study-reset]")?.addEventListener("click", () => { localStorage.removeItem(storageKey); render(); });
+    root.querySelectorAll("[data-reveal]").forEach((button) => button.addEventListener("click", () => {
+      if (!(button instanceof HTMLButtonElement)) return;
+      const answer = button.nextElementSibling;
+      if (!(answer instanceof HTMLElement)) return;
+      const expanded = button.getAttribute("aria-expanded") === "true";
+      button.setAttribute("aria-expanded", String(!expanded)); answer.hidden = expanded;
+      button.textContent = expanded ? button.dataset.show ?? "Show" : button.dataset.hide ?? "Hide";
+    }));
+    render();
+  });
+</script>
+
+<style>
+  .study-lab { margin-bottom: 2.2rem; padding: 1.4rem; }
+  .study-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(15rem, 22rem); gap: 2rem; align-items: end; padding-bottom: 1.2rem; border-bottom: 1px solid var(--line); }
+  .study-head > div:first-child { display: grid; gap: 0.6rem; }
+  .study-head .block-title, .study-head p { margin: 0; }
+  .study-head p { color: var(--text-soft); line-height: 1.6; }
+  .progress-panel { display: grid; gap: 0.45rem; }
+  .progress-label { display: flex; justify-content: space-between; color: var(--text); font-size: 0.84rem; }
+  .progress-track { height: 0.55rem; overflow: hidden; border-radius: 999px; background: var(--surface-strong); }
+  .progress-track span { display: block; height: 100%; border-radius: inherit; background: var(--primary); transition: width 260ms ease; }
+  .progress-count { color: var(--text-muted); font-size: 0.76rem; }
+  .reset-button { justify-self: start; padding: 0; border: 0; background: none; color: var(--primary); font: inherit; font-size: 0.76rem; cursor: pointer; }
+  .study-columns { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); gap: 2rem; padding-top: 1.4rem; }
+  .study-columns h3 { margin: 0 0 0.8rem; color: var(--text); font-size: 1rem; }
+  .domain-checklists, .review-cards { display: grid; gap: 0.65rem; }
+  .domain-checklist { border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-alt); }
+  .domain-checklist summary { display: flex; justify-content: space-between; gap: 1rem; padding: 0.8rem; color: var(--text); font-weight: 700; cursor: pointer; }
+  .domain-progress { color: var(--primary); font-size: 0.76rem; }
+  .checklist-items { display: grid; gap: 0.6rem; padding: 0 0.8rem 0.85rem; }
+  .study-topic { display: grid; grid-template-columns: auto 1fr; gap: 0.6rem; align-items: start; color: var(--text-soft); font-size: 0.86rem; line-height: 1.45; cursor: pointer; }
+  .study-topic input { margin-top: 0.18rem; accent-color: var(--primary); }
+  .study-topic:has(input:checked) span { color: var(--text-muted); text-decoration: line-through; }
+  .review-intro { margin: -0.35rem 0 0.8rem; color: var(--text-muted); font-size: 0.82rem; }
+  .review-card { padding: 0.85rem; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-alt); }
+  .review-domain { color: var(--primary); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .review-card > p { margin: 0.5rem 0 0.7rem; color: var(--text-soft); font-size: 0.86rem; line-height: 1.5; }
+  .review-card button { padding: 0; border: 0; background: none; color: var(--primary); font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+  .review-answer { margin-top: 0.7rem; padding-top: 0.7rem; border-top: 1px solid var(--line); color: var(--text-muted); font-size: 0.8rem; line-height: 1.5; }
+  .review-answer p { margin: 0; }
+  .review-answer p + p { margin-top: 0.45rem; }
+  @media (max-width: 820px) { .study-head, .study-columns { grid-template-columns: 1fr; gap: 1.2rem; } }
+</style>
